@@ -26,3 +26,8 @@ pip3 install termcolor
 pip3 install python-binance
 pip3 install cryptography
 ```
+
+### Get the script
+```
+wget https://raw.githubusercontent.com/zyairelai/futures-wolves-rise/main/run.py
+```
