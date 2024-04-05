@@ -1,4 +1,4 @@
-live_trade = False
+live_trade = True
 
 # Initialize Trade Size
 coin     = ["BTC", "ETH", "BNB", "BCH", "LTC"]
@@ -34,7 +34,6 @@ api_key    = os.environ.get('BINANCE_KEY')
 api_secret = os.environ.get('BINANCE_SECRET')
 client     = Client(api_key, api_secret)
 
-# Define Binance APIs
 def get_timestamp():
     return int(time.time() * 1000)
 
@@ -64,7 +63,7 @@ def set_hedge_mode():
     if not client.futures_get_position_mode(timestamp=get_timestamp()).get('dualSidePosition'):
         return client.futures_change_position_mode(dualSidePosition="true", timestamp=get_timestamp())
 
-set_hedge_mode() # Initial Setup no matter what
+set_hedge_mode()
 
 def market_open_long(pair, quantity):
     if live_trade:
@@ -154,16 +153,24 @@ def debug_heikin_ashi():
 
 # debug_heikin_ashi()
 
-# Define Place Order Condition
+def LONG_THE_DUMP(dataset):
+    final_5_rows = dataset['3m'].tail(5)
+    print(final_5_rows)
+    if (final_5_rows == 'RED').sum() > 2: return True
+    else: return False
+
+def SHORT_THE_PUMP(dataset):
+    final_5_rows = dataset['3m'].tail(5)
+    print(final_5_rows)
+    if (final_5_rows == 'GREEN').sum() > 2: return True
+    else: return False
 
 def GO_LONG_CONDITION(dataset):
     if  dataset['6h'] == "GREEN" and \
         dataset['1h'] == "GREEN" and \
         dataset['3m'] == "GREEN" and \
         dataset['1m'] == "GREEN" and \
-        dataset['1h'][-3:].value_counts().get("GREEN", 0) >= 3 and \
-        dataset['3m'][-5:].value_counts().get("RED", 0) >= 2:
-        return True
+        LONG_THE_DUMP(dataset): return True
     else: return False
 
 def GO_SHORT_CONDITION(dataset):
@@ -171,12 +178,8 @@ def GO_SHORT_CONDITION(dataset):
         dataset['1h'] == "RED" and \
         dataset['3m'] == "RED" and \
         dataset['1m'] == "RED" and \
-        dataset['1h'][-3:].value_counts().get("RED", 0) >= 3 and \
-        dataset['3m'][-5:].value_counts().get("GREEN", 0) >= 2:
-        return True
+        SHORT_THE_PUMP(dataset): return True
     else: return False
-
-# WORK IN PROGRESS
 
 def EXIT_LONG_CONDITION(dataset):
     if  dataset['1m'] != "GREEN" and \
@@ -223,7 +226,7 @@ def futures_wolves_rise(pair):
 def debug_futures_wolves_rise():
     print(futures_wolves_rise("BTCUSDT"))
 
-# debug_heikin_ashi()
+# debug_futures_wolves_rise()
 
 taker_fees    = 0.2
 
