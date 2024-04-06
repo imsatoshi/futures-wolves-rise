@@ -147,32 +147,18 @@ def valid_candle(HA):
 
 # WTF
 
-def LONG_THE_DUMP(dataset):
-    final_10_rows = dataset['3m'].tail(10).tolist()
-    print(final_10_rows)
-    if final_10_rows.count('RED') > 2: return True
-    else: return False
-
-def SHORT_THE_PUMP(dataset):
-    final_10_rows = dataset['3m'].tail(10).tolist()
-    print(final_10_rows)
-    if final_10_rows.count('GREEN') > 2: return True
-    else: return False
-
 def GO_LONG_CONDITION(dataset):
     if  dataset['6h'] == "GREEN" and \
         dataset['1h'] == "GREEN" and \
         dataset['3m'] == "GREEN" and \
-        dataset['1m'] == "GREEN" and \
-        LONG_THE_DUMP(dataset): return True
+        dataset['1m'] == "GREEN": return True
     else: return False
 
 def GO_SHORT_CONDITION(dataset):
     if  dataset['6h'] == "RED" and \
         dataset['1h'] == "RED" and \
         dataset['3m'] == "RED" and \
-        dataset['1m'] == "RED" and \
-        SHORT_THE_PUMP(dataset): return True
+        dataset['1m'] == "RED": return True
     else: return False
 
 def EXIT_LONG_CONDITION(dataset):
@@ -218,6 +204,18 @@ def futures_wolves_rise(pair):
 
     return dataset
 
+def recent_minute_dumping(dataset):
+    final_10_rows = dataset.tail(10).tolist()
+    if final_10_rows.count('RED') > 2: return True
+    else: return False
+
+def recent_minute_pumping(dataset):
+    final_10_rows = dataset.tail(10).tolist()
+    if final_10_rows.count('GREEN') > 2: return True
+    else: return False
+
+taker_fees = 0.2
+
 def debug_heikin_ashi():
     klines = get_klines("BTCUSDT", "1h")
     processed_heikin_ashi = heikin_ashi(klines)
@@ -228,14 +226,12 @@ def debug_futures_wolves_rise():
     print(futures_wolves_rise("ETHUSDT"))
 
 def debug_recent_minute_lookback(dataset):
-    LONG_THE_DUMP(dataset)
-    SHORT_THE_PUMP(dataset)
+    recent_minute_dumping(dataset)
+    recent_minute_pumping(dataset)
     
 # debug_heikin_ashi()
 # debug_futures_wolves_rise()
 # debug_recent_minute_lookback(debug_futures_wolves_rise())
-
-taker_fees    = 0.2
 
 def in_Profit(response):
     markPrice     = float(response.get('markPrice'))
@@ -257,23 +253,29 @@ def lets_make_some_money(pair, leverage, quantity):
 
     meow = futures_wolves_rise(pair)
     # print(meow)
+    long_the_dump = recent_minute_dumping(meow['3m'])
+    short_the_pump = recent_minute_pumping(meow['3m'])
 
     if LONG_SIDE(response) == "NO_POSITION":
-        if meow["GO_LONG"].iloc[-1]: market_open_long(pair, quantity)
+        if meow["GO_LONG"].iloc[-1] and long_the_dump:
+            market_open_long(pair, quantity)
         else: print("_LONG_SIDE : 🐺 WAIT 🐺")
 
     if LONG_SIDE(response) == "LONGING":
-        if meow["EXIT_LONG"].iloc[-1] and in_Profit(response[1]):
+        if (meow["EXIT_LONG"].iloc[-1] and in_Profit(response[1])) or \
+           (meow["6h"].iloc[-1] == "RED"):
             market_close_long(pair, response)
         else: 
             print(colored("_LONG_SIDE : HOLDING_LONG", "green"))
 
     if SHORT_SIDE(response) == "NO_POSITION":
-        if meow["GO_SHORT"].iloc[-1]: market_open_short(pair, quantity)
+        if meow["GO_SHORT"].iloc[-1] and short_the_pump:
+            market_open_short(pair, quantity)
         else: print("SHORT_SIDE : 🐺 WAIT 🐺")
 
     if SHORT_SIDE(response) == "SHORTING":
-        if meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[2]):
+        if (meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[2])) or \
+           (meow["6h"].iloc[-1] == "GREEN"):
             market_close_short(pair, response)
         else: 
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
