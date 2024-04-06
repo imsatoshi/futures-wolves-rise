@@ -215,13 +215,13 @@ def recent_minute_pumping(dataset):
     else: return False
 
 def trend_change_to_red(dataset):
-    last_3_hours = dataset.tail(200).tolist() # Recent 180 minutes aka 3 hours
-    if last_3_hours.count('RED') >= 180: return True 
+    last_3_hours = dataset.tail(240).tolist() # Recent 240 minutes aka 4 hours
+    if last_3_hours.count('RED') >= 180: return True # Take 3 hours
     else: return False
 
 def trend_change_to_green(dataset):
-    last_3_hours = dataset.tail(200).tolist() # Recent 180 minutes aka 3 hours
-    if last_3_hours.count('GREEN') >= 180: return True 
+    last_3_hours = dataset.tail(240).tolist() # Recent 240 minutes aka 4 hours
+    if last_3_hours.count('GREEN') >= 180: return True # Take 3 hours
     else: return False
 
 taker_fees = 0.15
@@ -262,7 +262,7 @@ def lets_make_some_money(pair, leverage, quantity):
     if int(response[0].get("leverage")) != leverage: change_leverage(pair, leverage)
 
     meow = futures_wolves_rise(pair)
-    print(meow)
+    # print(meow)
 
     long_the_dump = recent_minute_dumping(meow['3m'])
     short_the_pump = recent_minute_pumping(meow['3m'])
