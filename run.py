@@ -77,12 +77,12 @@ def market_open_short(pair, quantity):
 
 def market_close_long(pair, response):
     if live_trade:
-        client.futures_create_order(symbol=pair, quantity=abs(float(response[1].get('positionAmt'))), positionSide="LONG", side="SELL", type="MARKET", timestamp=get_timestamp())
+        client.futures_create_order(symbol=pair, quantity=abs(float(response[0].get('positionAmt'))), positionSide="LONG", side="SELL", type="MARKET", timestamp=get_timestamp())
     print("💰 CLOSE_LONG 💰")
 
 def market_close_short(pair, response):
     if live_trade:
-        client.futures_create_order(symbol=pair, quantity=abs(float(response[2].get('positionAmt'))), positionSide="SHORT", side="BUY", type="MARKET", timestamp=get_timestamp())
+        client.futures_create_order(symbol=pair, quantity=abs(float(response[1].get('positionAmt'))), positionSide="SHORT", side="BUY", type="MARKET", timestamp=get_timestamp())
     print("💰 CLOSE_SHORT 💰")
 
 # Define Heikin Ashi
@@ -136,7 +136,7 @@ def lower_wick(HA):
     else: return (HA['open'] - HA['low'] + HA['close'] - HA['low']) / 2
 
 def is_indecisive(HA):
-    if HA['upper'] > HA['body'] or HA['lower'] > HA['body']: return True # Tweak AND/OR here
+    if HA['upper'] > HA['body'] and HA['lower'] > HA['body']: return True # Tweak AND/OR here
     else: return False
 
 def valid_candle(HA):
@@ -162,13 +162,13 @@ def GO_SHORT_CONDITION(dataset):
     else: return False
 
 def EXIT_LONG_CONDITION(dataset):
-    if  dataset['1m'] != "GREEN" and \
-        dataset['3m'] != "GREEN" : return True
+    # print(dataset)
+    if  dataset['1m'] != "GREEN" and dataset['3m'] != "GREEN" : return True
     else : return False
 
 def EXIT_SHORT_CONDITION(dataset):
-    if  dataset['1m'] != "RED" and \
-        dataset['3m'] != "RED" : return True
+    # print(dataset)
+    if  dataset['1m'] != "RED" and dataset['3m'] != "RED" : return True
     else : return False
 
 def futures_wolves_rise(pair):
@@ -204,17 +204,19 @@ def futures_wolves_rise(pair):
 
     return dataset
 
+# The recent 3m is messed by timestamp along with 1m, so we need to x3 for everything
+
 def recent_minute_dumping(dataset):
-    final_10_rows = dataset.tail(10).tolist()
-    if final_10_rows.count('RED') > 2: return True
+    last_ten_3m = dataset.tail(30).tolist() # Recent look back the previous ten 3m candles
+    if last_ten_3m.count('RED') > 6: return True # 2x3 = 6
     else: return False
 
 def recent_minute_pumping(dataset):
-    final_10_rows = dataset.tail(10).tolist()
-    if final_10_rows.count('GREEN') > 2: return True
+    last_ten_3m = dataset.tail(30).tolist() # Recent look back the previous ten 3m candles
+    if last_ten_3m.count('GREEN') > 6: return True # 2x3 = 6
     else: return False
 
-taker_fees = 0.2
+taker_fees = 0.15
 
 def debug_heikin_ashi():
     klines = get_klines("BTCUSDT", "1h")
@@ -238,6 +240,7 @@ def in_Profit(response):
     positionAmt   = abs(float(response.get('positionAmt')))
     unRealizedPNL = round(float(response.get('unRealizedProfit')), 2)
     breakeven_PNL = (markPrice * positionAmt * taker_fees) / 100
+    print(breakeven_PNL)
     return True if unRealizedPNL > breakeven_PNL else False
 
 def lets_make_some_money(pair, leverage, quantity): 
@@ -246,13 +249,13 @@ def lets_make_some_money(pair, leverage, quantity):
 
     # Retrieve Infomation for Initial Trade Setup
     response = position_information(pair)
-    # print(response)
+    print(response)
 
     if response[0].get('marginType') != "isolated": change_margin_to_ISOLATED(pair)
     if int(response[0].get("leverage")) != leverage: change_leverage(pair, leverage)
 
     meow = futures_wolves_rise(pair)
-    # print(meow)
+    print(meow)
     long_the_dump = recent_minute_dumping(meow['3m'])
     short_the_pump = recent_minute_pumping(meow['3m'])
 
@@ -262,8 +265,7 @@ def lets_make_some_money(pair, leverage, quantity):
         else: print("_LONG_SIDE : 🐺 WAIT 🐺")
 
     if LONG_SIDE(response) == "LONGING":
-        if (meow["EXIT_LONG"].iloc[-1] and in_Profit(response[1])) or \
-           (meow["6h"].iloc[-1] == "RED"):
+        if (meow["EXIT_LONG"].iloc[-1] and in_Profit(response[0])) or (meow["6h"].iloc[-1] == "RED"):
             market_close_long(pair, response)
         else: 
             print(colored("_LONG_SIDE : HOLDING_LONG", "green"))
@@ -274,8 +276,7 @@ def lets_make_some_money(pair, leverage, quantity):
         else: print("SHORT_SIDE : 🐺 WAIT 🐺")
 
     if SHORT_SIDE(response) == "SHORTING":
-        if (meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[2])) or \
-           (meow["6h"].iloc[-1] == "GREEN"):
+        if (meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[1])) or (meow["6h"].iloc[-1] == "GREEN"):
             market_close_short(pair, response)
         else: 
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
