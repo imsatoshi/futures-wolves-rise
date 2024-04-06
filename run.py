@@ -215,27 +215,25 @@ def recent_minute_pumping(threeminute):
     else: return False
 
 def trend_change_to_red(onehour):
-    last_3_hours = onehour.tail(240).tolist() # Recent 240 minutes aka 4 hours
+    last_3_hours = onehour.tail(180).tolist() # Recent 180 minutes
     if last_3_hours.count('RED') >= 180: return True # Take 3 hours
     else: return False
 
 def trend_change_to_green(onehour):
-    last_3_hours = onehour.tail(240).tolist() # Recent 240 minutes aka 4 hours
+    last_3_hours = onehour.tail(180).tolist() # Recent 180 minutes
     if last_3_hours.count('GREEN') >= 180: return True # Take 3 hours
     else: return False
 
 def clear_direction_long(sixhour, onehour):
     last_two_6hr = sixhour.tail(800).tolist() # Last two 6 hours
-    if last_two_6hr.count('GREEN') >= 640:
-        return True
+    if last_two_6hr.count('GREEN') >= 720: return True
     else:
         if trend_change_to_green(onehour): return True
         else: return False
 
 def clear_direction_short(sixhour, onehour):
     last_two_6hr = sixhour.tail(800).tolist() # Last two 6 hours
-    if last_two_6hr.count('RED') >= 640:
-        return True
+    if last_two_6hr.count('RED') >= 720: return True
     else:
         if trend_change_to_red(onehour): return True
         else: return False
@@ -306,13 +304,13 @@ def lets_make_some_money(pair, leverage, quantity):
         else: print("SHORT_SIDE : 🐺 WAIT 🐺")
 
     if SHORT_SIDE(response) == "SHORTING":
-        if (meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[1])) or (meow["6h"].iloc[-1] == "RED" or green_taking_over):
+        if (meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[1])) or (meow["6h"].iloc[-1] != "RED" or green_taking_over):
             market_close_short(pair, response)
         else: 
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
     print("Last action executed @ " + datetime.now().strftime("%H:%M:%S") + "\n")
 
-    time.sleep(2)
+    time.sleep(1)
 
 try:
     while True:
