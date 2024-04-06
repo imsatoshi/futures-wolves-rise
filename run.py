@@ -153,15 +153,17 @@ def debug_heikin_ashi():
 
 # debug_heikin_ashi()
 
+recent_minute_lookback = 10
+
 def LONG_THE_DUMP(dataset):
-    final_5_rows = dataset['3m'].tail(5)
-    print(final_5_rows)
+    final_5_rows = dataset.tail(recent_minute_lookback)['3m']
+    # print(final_5_rows)
     if (final_5_rows == 'RED').sum() > 2: return True
     else: return False
 
 def SHORT_THE_PUMP(dataset):
-    final_5_rows = dataset['3m'].tail(5)
-    print(final_5_rows)
+    final_5_rows = dataset.tail(recent_minute_lookback)['3m']
+    # print(final_5_rows)
     if (final_5_rows == 'GREEN').sum() > 2: return True
     else: return False
 
@@ -221,6 +223,10 @@ def futures_wolves_rise(pair):
     dataset["GO_SHORT"] = dataset.apply(GO_SHORT_CONDITION, axis=1)
     dataset["EXIT_LONG"] = dataset.apply(EXIT_LONG_CONDITION, axis=1)
     dataset["EXIT_SHORT"] = dataset.apply(EXIT_SHORT_CONDITION, axis=1)
+
+    # Debug recent minute lookback
+    LONG_THE_DUMP(dataset)
+    SHORT_THE_PUMP(dataset)
     return dataset
 
 def debug_futures_wolves_rise():
