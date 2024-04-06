@@ -310,7 +310,7 @@ def lets_make_some_money(pair, leverage, quantity):
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
     print("Last action executed @ " + datetime.now().strftime("%H:%M:%S") + "\n")
 
-    time.sleep(1)
+    time.sleep(1.5)
 
 try:
     while True:
