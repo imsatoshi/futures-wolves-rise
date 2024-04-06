@@ -1,11 +1,10 @@
 live_trade = True
 
 # Initialize Trade Size
-coin     = ["BTC", "ETH", "BNB", "BCH", "LTC"]
-quantity = [0.002, 0.03, 0.15, 0.1, 0.5]
-
 # coin     = ["BTC", "ETH", "BNB", "BCH", "LTC", "SOL"]
 # quantity = [0.005, 0.05, 0.3, 0.3, 2, 1]
+coin     = ["BTC", "ETH", "BNB", "BCH", "LTC"]
+quantity = [0.002, 0.03, 0.15, 0.1, 0.5]
 leverage, pair = [], []
 
 for i in range(len(coin)):
@@ -26,8 +25,7 @@ from datetime import datetime
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 
-if live_trade:
-    print(colored("------ LIVE TRADE IS ENABLED ------\n", "green"))
+if live_trade: print(colored("------ LIVE TRADE IS ENABLED ------\n", "green"))
 
 # Get environment variables
 api_key    = os.environ.get('BINANCE_KEY')
@@ -160,12 +158,10 @@ def GO_SHORT_CONDITION(dataset):
     else: return False
 
 def EXIT_LONG_CONDITION(dataset):
-    # print(dataset)
     if  dataset['1m'] != "GREEN" and dataset['3m'] != "GREEN" : return True
     else : return False
 
 def EXIT_SHORT_CONDITION(dataset):
-    # print(dataset)
     if  dataset['1m'] != "RED" and dataset['3m'] != "RED" : return True
     else : return False
 
@@ -173,14 +169,14 @@ def futures_wolves_rise(pair):
     # Fetch the klines data
     raw_six_hr = get_klines(pair, '6h')
     raw_one_hr = get_klines(pair, '1h')
-    raw_three_min = get_klines(pair, '3m')
-    raw_one_min = get_klines(pair, '1m')
+    raw_3_min  = get_klines(pair, '3m')
+    raw_1_min  = get_klines(pair, '1m')
 
     # Process Heikin Ashi 
     six_hr = heikin_ashi(raw_six_hr)[["timestamp", "candle"]].copy()
     one_hr = heikin_ashi(raw_one_hr)[["timestamp", "candle"]].copy()
-    three_min = heikin_ashi(raw_three_min)[["timestamp", "candle"]].copy()
-    one_min = heikin_ashi(raw_one_min)[["timestamp", "candle"]].copy()
+    three_min = heikin_ashi(raw_3_min)[["timestamp", "candle"]].copy()
+    one_min = heikin_ashi(raw_1_min)[["timestamp", "candle"]].copy()
 
     # Rename the column to avoid conflict
     six_hr = six_hr.rename(columns={'candle': '6h'})
@@ -202,40 +198,62 @@ def futures_wolves_rise(pair):
 
     return dataset
 
-# The recent 3m is messed by timestamp along with 1m, so we need to x3 for everything
-
-def recent_minute_dumping(threeminute):
-    last_ten_3m = threeminute.tail(30).tolist() # Recent look back the previous ten 3m candles
-    if last_ten_3m.count('RED') > 6: return True # 2 x 3 = 6
+def recent_minute_dumping(pair):
+    raw_3_min = get_klines(pair, '3m')
+    three_min = heikin_ashi(raw_3_min)["candle"].copy()
+    last_ten_3m = three_min.tail(10).tolist()
+    # print("last_ten_3m")
+    # print(last_ten_3m)
+    if last_ten_3m.count('RED') > 2: return True
     else: return False
 
-def recent_minute_pumping(threeminute):
-    last_ten_3m = threeminute.tail(30).tolist() # Recent look back the previous ten 3m candles
-    if last_ten_3m.count('GREEN') > 6: return True # 2 x 3 = 6
+def recent_minute_pumping(pair):
+    raw_3_min = get_klines(pair, '3m')
+    three_min = heikin_ashi(raw_3_min)["candle"].copy()
+    last_ten_3m = three_min.tail(10).tolist()
+    # print("last_ten_3m")
+    # print(last_ten_3m)
+    if last_ten_3m.count('GREEN') > 2: return True
     else: return False
 
-def trend_change_to_red(onehour):
-    last_3_hours = onehour.tail(180).tolist() # Recent 180 minutes
-    if last_3_hours.count('RED') >= 180: return True # Take 3 hours
+def trend_change_to_red(pair):
+    raw_1_hr = get_klines(pair, '1h')
+    one_hour = heikin_ashi(raw_1_hr)["candle"].copy()
+    last_3_hours = one_hour.tail(3).tolist()
+    # print("last_3_hours")
+    # print(last_3_hours)
+    if last_3_hours.count('RED') == 3: return True
     else: return False
 
-def trend_change_to_green(onehour):
-    last_3_hours = onehour.tail(180).tolist() # Recent 180 minutes
-    if last_3_hours.count('GREEN') >= 180: return True # Take 3 hours
+def trend_change_to_green(pair):
+    raw_1_hr = get_klines(pair, '1h')
+    one_hour = heikin_ashi(raw_1_hr)["candle"].copy()
+    last_3_hours = one_hour.tail(3).tolist()
+    # print("last_3_hours")
+    # print(last_3_hours)
+    if last_3_hours.count('GREEN') == 3: return True
     else: return False
 
-def clear_direction_long(sixhour, onehour):
-    last_two_6hr = sixhour.tail(720).tolist() # Last two 6 hours
-    if last_two_6hr.count('GREEN') >= 720: return True
+def clear_direction_long(pair):
+    raw_6_hr = get_klines(pair, '6h')
+    six_hour = heikin_ashi(raw_6_hr)["candle"].copy()
+    last_two_6hr = six_hour.tail(2).tolist()
+    # print("last_two_6hr")
+    # print(last_two_6hr)
+    if last_two_6hr.count('GREEN') == 2: return True
     else:
-        if trend_change_to_green(onehour): return True
+        if trend_change_to_green(pair): return True
         else: return False
 
-def clear_direction_short(sixhour, onehour):
-    last_two_6hr = sixhour.tail(720).tolist() # Last two 6 hours
-    if last_two_6hr.count('RED') >= 720: return True
+def clear_direction_short(pair):
+    raw_6_hr = get_klines(pair, '6h')
+    six_hour = heikin_ashi(raw_6_hr)["candle"].copy()
+    last_two_6hr = six_hour.tail(2).tolist()
+    # print("last_two_6hr")
+    # print(last_two_6hr)
+    if last_two_6hr.count('RED') == 2: return True
     else:
-        if trend_change_to_red(onehour): return True
+        if trend_change_to_red(pair): return True
         else: return False
 
 taker_fees = 0.15
@@ -278,14 +296,14 @@ def lets_make_some_money(pair, leverage, quantity):
     meow = futures_wolves_rise(pair)
     # print(meow)
 
-    long_the_dump = recent_minute_dumping(meow['3m'])
-    short_the_pump = recent_minute_pumping(meow['3m'])
+    long_the_dump = recent_minute_dumping(pair)
+    short_the_pump = recent_minute_pumping(pair)
 
-    red_taking_over = trend_change_to_red(meow['1h'])
-    green_taking_over = trend_change_to_green(meow['1h'])
+    red_taking_over = trend_change_to_red(pair)
+    green_taking_over = trend_change_to_green(pair)
 
-    green_clear_direction = clear_direction_long(meow['6h'], meow['1h'])
-    red_clear_direction = clear_direction_short(meow['6h'], meow['1h'])
+    green_clear_direction = clear_direction_long(pair)
+    red_clear_direction = clear_direction_short(pair)
 
     if LONG_SIDE(response) == "NO_POSITION":
         if meow["GO_LONG"].iloc[-1] and long_the_dump and green_clear_direction:
@@ -310,7 +328,7 @@ def lets_make_some_money(pair, leverage, quantity):
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
     print("Last action executed @ " + datetime.now().strftime("%H:%M:%S") + "\n")
 
-    time.sleep(1.5)
+    # time.sleep(1.5)
 
 try:
     while True:
