@@ -87,7 +87,7 @@ def market_close_short(pair, response):
 
 # Define Heikin Ashi
 
-candlequery = 300
+candlequery = 1000
 ccxt_client = ccxt.binance()
 tohlcv_colume = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
 
@@ -204,25 +204,41 @@ def futures_wolves_rise(pair):
 
 # The recent 3m is messed by timestamp along with 1m, so we need to x3 for everything
 
-def recent_minute_dumping(dataset):
-    last_ten_3m = dataset.tail(30).tolist() # Recent look back the previous ten 3m candles
+def recent_minute_dumping(threeminute):
+    last_ten_3m = threeminute.tail(30).tolist() # Recent look back the previous ten 3m candles
     if last_ten_3m.count('RED') > 6: return True # 2 x 3 = 6
     else: return False
 
-def recent_minute_pumping(dataset):
-    last_ten_3m = dataset.tail(30).tolist() # Recent look back the previous ten 3m candles
+def recent_minute_pumping(threeminute):
+    last_ten_3m = threeminute.tail(30).tolist() # Recent look back the previous ten 3m candles
     if last_ten_3m.count('GREEN') > 6: return True # 2 x 3 = 6
     else: return False
 
-def trend_change_to_red(dataset):
-    last_3_hours = dataset.tail(240).tolist() # Recent 240 minutes aka 4 hours
+def trend_change_to_red(onehour):
+    last_3_hours = onehour.tail(240).tolist() # Recent 240 minutes aka 4 hours
     if last_3_hours.count('RED') >= 180: return True # Take 3 hours
     else: return False
 
-def trend_change_to_green(dataset):
-    last_3_hours = dataset.tail(240).tolist() # Recent 240 minutes aka 4 hours
+def trend_change_to_green(onehour):
+    last_3_hours = onehour.tail(240).tolist() # Recent 240 minutes aka 4 hours
     if last_3_hours.count('GREEN') >= 180: return True # Take 3 hours
     else: return False
+
+def clear_direction_long(sixhour, onehour):
+    last_two_6hr = sixhour.tail(800).tolist() # Last two 6 hours
+    if last_two_6hr.count('GREEN') >= 640:
+        return True
+    else:
+        if trend_change_to_green(onehour): return True
+        else: return False
+
+def clear_direction_short(sixhour, onehour):
+    last_two_6hr = sixhour.tail(800).tolist() # Last two 6 hours
+    if last_two_6hr.count('RED') >= 640:
+        return True
+    else:
+        if trend_change_to_red(onehour): return True
+        else: return False
 
 taker_fees = 0.15
 
@@ -270,8 +286,11 @@ def lets_make_some_money(pair, leverage, quantity):
     red_taking_over = trend_change_to_red(meow['1h'])
     green_taking_over = trend_change_to_green(meow['1h'])
 
+    green_clear_direction = clear_direction_long(meow['6h'], meow['1h'])
+    red_clear_direction = clear_direction_short(meow['6h'], meow['1h'])
+
     if LONG_SIDE(response) == "NO_POSITION":
-        if meow["GO_LONG"].iloc[-1] and long_the_dump:
+        if meow["GO_LONG"].iloc[-1] and long_the_dump and green_clear_direction:
             market_open_long(pair, quantity)
         else: print("_LONG_SIDE : 🐺 WAIT 🐺")
 
@@ -282,7 +301,7 @@ def lets_make_some_money(pair, leverage, quantity):
             print(colored("_LONG_SIDE : HOLDING_LONG", "green"))
 
     if SHORT_SIDE(response) == "NO_POSITION":
-        if meow["GO_SHORT"].iloc[-1] and short_the_pump:
+        if meow["GO_SHORT"].iloc[-1] and short_the_pump and red_clear_direction:
             market_open_short(pair, quantity)
         else: print("SHORT_SIDE : 🐺 WAIT 🐺")
 
@@ -293,7 +312,7 @@ def lets_make_some_money(pair, leverage, quantity):
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
     print("Last action executed @ " + datetime.now().strftime("%H:%M:%S") + "\n")
 
-    time.sleep(1)
+    time.sleep(2)
 
 try:
     while True:
