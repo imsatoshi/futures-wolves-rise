@@ -145,26 +145,18 @@ def valid_candle(HA):
         elif HA['color'] == "RED": return "RED"
     else: return "INDECISIVE"
 
-def debug_heikin_ashi():
-    klines = get_klines("BTCUSDT", "1h")
-    processed_heikin_ashi = heikin_ashi(klines)
-    print("\nheikin_ashi.heikin_ashi")
-    print(processed_heikin_ashi)
-
-# debug_heikin_ashi()
-
-recent_minute_lookback = 10
+# WTF
 
 def LONG_THE_DUMP(dataset):
-    final_5_rows = dataset.tail(recent_minute_lookback)['3m']
-    # print(final_5_rows)
-    if (final_5_rows == 'RED').sum() > 2: return True
+    final_10_rows = dataset['3m'].tail(10).tolist()
+    print(final_10_rows)
+    if final_10_rows.count('RED') > 2: return True
     else: return False
 
 def SHORT_THE_PUMP(dataset):
-    final_5_rows = dataset.tail(recent_minute_lookback)['3m']
-    # print(final_5_rows)
-    if (final_5_rows == 'GREEN').sum() > 2: return True
+    final_10_rows = dataset['3m'].tail(10).tolist()
+    print(final_10_rows)
+    if final_10_rows.count('GREEN') > 2: return True
     else: return False
 
 def GO_LONG_CONDITION(dataset):
@@ -224,15 +216,24 @@ def futures_wolves_rise(pair):
     dataset["EXIT_LONG"] = dataset.apply(EXIT_LONG_CONDITION, axis=1)
     dataset["EXIT_SHORT"] = dataset.apply(EXIT_SHORT_CONDITION, axis=1)
 
-    # Debug recent minute lookback
-    LONG_THE_DUMP(dataset)
-    SHORT_THE_PUMP(dataset)
     return dataset
 
-def debug_futures_wolves_rise():
-    print(futures_wolves_rise("BTCUSDT"))
+def debug_heikin_ashi():
+    klines = get_klines("BTCUSDT", "1h")
+    processed_heikin_ashi = heikin_ashi(klines)
+    print("\nheikin_ashi.heikin_ashi")
+    print(processed_heikin_ashi)
 
+def debug_futures_wolves_rise():
+    print(futures_wolves_rise("ETHUSDT"))
+
+def debug_recent_minute_lookback(dataset):
+    LONG_THE_DUMP(dataset)
+    SHORT_THE_PUMP(dataset)
+    
+# debug_heikin_ashi()
 # debug_futures_wolves_rise()
+# debug_recent_minute_lookback(debug_futures_wolves_rise())
 
 taker_fees    = 0.2
 
@@ -277,6 +278,7 @@ def lets_make_some_money(pair, leverage, quantity):
         else: 
             print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
     print("Last action executed @ " + datetime.now().strftime("%H:%M:%S") + "\n")
+
     time.sleep(1)
 
 try:
