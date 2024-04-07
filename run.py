@@ -2,16 +2,18 @@ live_trade = True
 
 # Initialize Trade Size
 # coin     = ["BTC", "ETH", "BNB", "BCH", "LTC", "SOL"]
-# quantity = [0.005, 0.05, 0.3, 0.3, 2, 1]
 coin     = ["BTC", "ETH", "BNB", "BCH", "LTC"]
-quantity = [0.002, 0.03, 0.15, 0.1, 0.5]
+
+# quantity = [0.005, 0.1, 0.4, 0.3, 2, 2] # ~$5
+# quantity = [0.01, 0.15, 0.8, 0.5, 4, 3] # ~$7
+quantity = [0.002, 0.03, 0.15, 0.1, 0.8] # ~$2
 leverage, pair = [], []
 
 for i in range(len(coin)):
     pair.append(coin[i] + "USDT")
-    if   coin[i] == "BTC": leverage.append(75)
-    elif coin[i] == "ETH": leverage.append(60)
-    else: leverage.append(45)
+    if   coin[i] == "BTC": leverage.append(100)
+    elif coin[i] == "ETH": leverage.append(75)
+    else: leverage.append(60)
 
     print("Pair Name        :   " + pair[i])
     print("Trade Quantity   :   " + str(quantity[i]) + " " + coin[i])
@@ -201,15 +203,15 @@ def futures_wolves_rise(pair):
 def recent_minute_dumping(pair):
     raw_3_min = get_klines(pair, '3m')
     three_min = heikin_ashi(raw_3_min)["candle"].copy()
-    last_ten_3m = three_min.tail(10).tolist()
-    if last_ten_3m.count('RED') > 2: return True
+    last_ten_3m = three_min.tail(20).tolist()
+    if last_ten_3m.count('RED') >= 5: return True
     else: return False
 
 def recent_minute_pumping(pair):
     raw_3_min = get_klines(pair, '3m')
     three_min = heikin_ashi(raw_3_min)["candle"].copy()
-    last_ten_3m = three_min.tail(10).tolist()
-    if last_ten_3m.count('GREEN') > 2: return True
+    last_ten_3m = three_min.tail(20).tolist()
+    if last_ten_3m.count('GREEN') >= 5: return True
     else: return False
 
 def perfect_entry_long(pair):
