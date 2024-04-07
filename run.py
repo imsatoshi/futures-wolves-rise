@@ -202,8 +202,6 @@ def recent_minute_dumping(pair):
     raw_3_min = get_klines(pair, '3m')
     three_min = heikin_ashi(raw_3_min)["candle"].copy()
     last_ten_3m = three_min.tail(10).tolist()
-    # print("last_ten_3m")
-    # print(last_ten_3m)
     if last_ten_3m.count('RED') > 2: return True
     else: return False
 
@@ -211,17 +209,31 @@ def recent_minute_pumping(pair):
     raw_3_min = get_klines(pair, '3m')
     three_min = heikin_ashi(raw_3_min)["candle"].copy()
     last_ten_3m = three_min.tail(10).tolist()
-    # print("last_ten_3m")
-    # print(last_ten_3m)
     if last_ten_3m.count('GREEN') > 2: return True
+    else: return False
+
+def perfect_entry_long(pair):
+    raw_1_min = get_klines(pair, '3m')
+    one_min = heikin_ashi(raw_1_min)[["color", "candle"]].copy()
+
+    if one_min["candle"].iloc[-2] == "INDECISIVE" and \
+        one_min["color"].iloc[-2] == "GREEN": return True
+    elif one_min["candle"].iloc[-2] == "GREEN": return True
+    else: return False
+
+def perfect_entry_short(pair):
+    raw_1_min = get_klines(pair, '3m')
+    one_min = heikin_ashi(raw_1_min)[["color", "candle"]].copy()
+
+    if one_min["candle"].iloc[-2] == "INDECISIVE" and \
+        one_min["color"].iloc[-2] == "RED": return True
+    elif one_min["candle"].iloc[-2] == "RED": return True
     else: return False
 
 def trend_change_to_red(pair):
     raw_1_hr = get_klines(pair, '1h')
     one_hour = heikin_ashi(raw_1_hr)["candle"].copy()
     last_3_hours = one_hour.tail(3).tolist()
-    # print("last_3_hours")
-    # print(last_3_hours)
     if last_3_hours.count('RED') == 3: return True
     else: return False
 
@@ -229,8 +241,6 @@ def trend_change_to_green(pair):
     raw_1_hr = get_klines(pair, '1h')
     one_hour = heikin_ashi(raw_1_hr)["candle"].copy()
     last_3_hours = one_hour.tail(3).tolist()
-    # print("last_3_hours")
-    # print(last_3_hours)
     if last_3_hours.count('GREEN') == 3: return True
     else: return False
 
@@ -238,8 +248,6 @@ def clear_direction_long(pair):
     raw_6_hr = get_klines(pair, '6h')
     six_hour = heikin_ashi(raw_6_hr)["candle"].copy()
     last_two_6hr = six_hour.tail(2).tolist()
-    # print("last_two_6hr")
-    # print(last_two_6hr)
     if last_two_6hr.count('GREEN') == 2: return True
     else:
         if trend_change_to_green(pair): return True
@@ -249,8 +257,6 @@ def clear_direction_short(pair):
     raw_6_hr = get_klines(pair, '6h')
     six_hour = heikin_ashi(raw_6_hr)["candle"].copy()
     last_two_6hr = six_hour.tail(2).tolist()
-    # print("last_two_6hr")
-    # print(last_two_6hr)
     if last_two_6hr.count('RED') == 2: return True
     else:
         if trend_change_to_red(pair): return True
@@ -296,36 +302,37 @@ def lets_make_some_money(pair, leverage, quantity):
     meow = futures_wolves_rise(pair)
     # print(meow)
 
-    long_the_dump = recent_minute_dumping(pair)
-    short_the_pump = recent_minute_pumping(pair)
+    green_clear_direction = clear_direction_long(pair)
+    red_clear_direction = clear_direction_short(pair)
 
     red_taking_over = trend_change_to_red(pair)
     green_taking_over = trend_change_to_green(pair)
 
-    green_clear_direction = clear_direction_long(pair)
-    red_clear_direction = clear_direction_short(pair)
+    long_the_dump = recent_minute_dumping(pair)
+    short_the_pump = recent_minute_pumping(pair)
 
-    if LONG_SIDE(response) == "NO_POSITION":
-        if meow["GO_LONG"].iloc[-1] and long_the_dump and green_clear_direction:
+    lets_long = perfect_entry_long(pair)
+    lets_short = perfect_entry_short(pair)
+
+    if LONG_SIDE(response) == "NO_POSITION": # Open Long Position
+        if meow["GO_LONG"].iloc[-1] and green_clear_direction and long_the_dump and lets_long:
             market_open_long(pair, quantity)
         else: print("_LONG_SIDE : 🐺 WAIT 🐺")
 
-    if LONG_SIDE(response) == "LONGING":
+    if LONG_SIDE(response) == "LONGING": # Close Long Position
         if (meow["EXIT_LONG"].iloc[-1] and in_Profit(response[0])) or red_taking_over:
             market_close_long(pair, response)
-        else: 
-            print(colored("_LONG_SIDE : HOLDING_LONG", "green"))
+        else: print(colored("_LONG_SIDE : HOLDING_LONG", "green"))
 
-    if SHORT_SIDE(response) == "NO_POSITION":
-        if meow["GO_SHORT"].iloc[-1] and short_the_pump and red_clear_direction:
+    if SHORT_SIDE(response) == "NO_POSITION": # Open Short Position
+        if meow["GO_SHORT"].iloc[-1] and red_clear_direction and short_the_pump and lets_short:
             market_open_short(pair, quantity)
         else: print("SHORT_SIDE : 🐺 WAIT 🐺")
 
-    if SHORT_SIDE(response) == "SHORTING":
+    if SHORT_SIDE(response) == "SHORTING": # Close Short Position
         if (meow["EXIT_SHORT"].iloc[-1] and in_Profit(response[1])) or green_taking_over:
             market_close_short(pair, response)
-        else: 
-            print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
+        else: print(colored("SHORT_SIDE : HOLDING_SHORT", "red"))
     print("Last action executed @ " + datetime.now().strftime("%H:%M:%S") + "\n")
 
     # time.sleep(1.5)
